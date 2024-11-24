@@ -14,38 +14,62 @@ try {
     exit;
 }
 
-if (isset($_GET['country'])) {
+if (isset($_GET['country']) && isset($_GET['lookup'])) {
     $country = $_GET['country'];
+    $lookupType = $_GET['lookup'];
 
-    $stmt = $conn->prepare("SELECT name, continent, independence_year, head_of_state FROM countries WHERE name LIKE :country");
-    $stmt->execute(['country' => "%$country%"]);
-    $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($lookupType === 'country') {
+        $stmt = $conn->prepare("SELECT name, continent, independence_year, head_of_state FROM countries WHERE name LIKE :country");
+        $stmt->execute(['country' => "%$country%"]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if ($results) {
-        echo "<table border='1' style='width: 100%; border-collapse: collapse;'>";
-        echo "<thead>";
-        echo "<tr>";
-        echo "<th>Name</th>";
-        echo "<th>Continent</th>";
-        echo "<th>Independence Year</th>";
-        echo "<th>Head of State</th>";
-        echo "</tr>";
-        echo "</thead>";
-        echo "<tbody>";
-        foreach ($results as $row) {
-            echo "<tr>";
-            echo "<td>" . htmlspecialchars($row['name']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['continent']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['independence_year']) . "</td>";
-            echo "<td>" . htmlspecialchars($row['head_of_state']) . "</td>";
-            echo "</tr>";
+        if ($results) {
+            echo "<table border='1' style='width: 100%; border-collapse: collapse;'>";
+            echo "<thead>";
+            echo "<tr><th>Name</th><th>Continent</th><th>Independence Year</th><th>Head of State</th></tr>";
+            echo "</thead><tbody>";
+            foreach ($results as $row) {
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['name']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['continent']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['independence_year']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['head_of_state']) . "</td>";
+                echo "</tr>";
+            }
+            echo "</tbody></table>";
+        } else {
+            echo "<p>No results found for '" . htmlspecialchars($country) . "'</p>";
         }
-        echo "</tbody>";
-        echo "</table>";
+    } elseif ($lookupType === 'cities') {
+        $stmt = $conn->prepare(
+            "SELECT cities.name AS city_name, cities.district, cities.population 
+             FROM cities 
+             JOIN countries ON cities.country_code = countries.code 
+             WHERE countries.name LIKE :country"
+        );
+        $stmt->execute(['country' => "%$country%"]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($results) {
+            echo "<table border='1' style='width: 100%; border-collapse: collapse;'>";
+            echo "<thead>";
+            echo "<tr><th>City</th><th>District</th><th>Population</th></tr>";
+            echo "</thead><tbody>";
+            foreach ($results as $row) {
+                echo "<tr>";
+                echo "<td>" . htmlspecialchars($row['city_name']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['district']) . "</td>";
+                echo "<td>" . htmlspecialchars($row['population']) . "</td>";
+                echo "</tr>";
+            }
+            echo "</tbody></table>";
+        } else {
+            echo "<p>No cities found for '" . htmlspecialchars($country) . "'</p>";
+        }
     } else {
-        echo "<p>No results found for '" . htmlspecialchars($country) . "'</p>";
+        echo "<p>Invalid lookup type.</p>";
     }
 } else {
-    echo "<p>Please specify a country using the 'country' query parameter.</p>";
+    echo "<p>Missing parameters. Please provide a country and a lookup type.</p>";
 }
 ?>
